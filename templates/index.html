@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fake Product Detector — Counterfeit Risk Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="scanlines" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="brand">
+    <span class="brand-mark">◈</span>
+    <div class="brand-text">
+      <span class="brand-name">Fake&nbsp;Product&nbsp;Detector</span>
+      <span class="brand-sub">Local Counterfeit Risk Scanner</span>
+    </div>
+  </div>
+  <div class="header-tag">
+    <span class="dot"></span> Runs 100% locally &middot; no cloud &middot; no login
+  </div>
+</header>
+
+<main class="layout">
+
+<div class="left-column">
+
+  <!-- DEMO: Quick-load a sample product -->
+  <section class="panel demo-panel">
+    <h2 class="panel-title"><span class="idx">00</span> Quick Demo</h2>
+    <p class="demo-hint">
+      Load a sample listing (image + reviews + price + seller history) instead of typing everything by hand.
+    </p>
+    <div class="demo-row">
+      <select id="demoSelect" class="demo-select">
+        <option value="">— Select a demo product —</option>
+      </select>
+      <button id="demoLoadBtn" class="btn btn-primary demo-load-btn" disabled>Load</button>
+    </div>
+  </section>
+
+  <!-- LEFT: Upload / Preview -->
+  <section class="panel upload-panel">
+    <h2 class="panel-title"><span class="idx">01</span> Load Image</h2>
+
+    <div id="dropzone" class="dropzone">
+      <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.webp,.bmp" hidden>
+
+      <div id="dropzoneEmpty" class="dropzone-empty">
+        <div class="upload-icon">⤒</div>
+        <p class="dz-title">Drag &amp; drop a product image</p>
+        <p class="dz-sub">or click to browse — JPG, PNG, WEBP, BMP · max 10MB</p>
+      </div>
+
+      <div id="previewWrap" class="preview-wrap hidden">
+        <div class="viewfinder">
+          <span class="corner tl"></span><span class="corner tr"></span>
+          <span class="corner bl"></span><span class="corner br"></span>
+          <div id="scanLine" class="scan-line hidden"></div>
+          <img id="previewImg" alt="Uploaded product preview">
+        </div>
+      </div>
+    </div>
+
+    <div class="file-meta" id="fileMeta"></div>
+
+    <div class="actions">
+      <button id="analyzeBtn" class="btn btn-primary" disabled>
+        <span class="btn-label">Analyze Image</span>
+      </button>
+      <button id="resetBtn" class="btn btn-ghost hidden">Load Another</button>
+    </div>
+
+    <div id="errorBox" class="error-box hidden"></div>
+
+    <p class="disclaimer">
+      This tool produces a <strong>counterfeit risk assessment</strong> based on the signals below —
+      it is <strong>not definitive proof</strong> that any product is genuine or fake.
+    </p>
+  </section>
+
+  <!-- MIDDLE: Optional listing signals -->
+  <section class="panel signals-panel">
+    <button type="button" id="signalsToggle" class="signals-toggle">
+      <h2 class="panel-title">
+        <span class="idx">02</span> Listing Signals
+        <span class="optional-tag">optional · improves accuracy</span>
+      </h2>
+      <span id="signalsChevron" class="chevron">▾</span>
+    </button>
+
+    <div id="signalsBody" class="signals-body">
+      <p class="signals-hint">
+        Image analysis alone is a weak signal — an AI-generated or low-quality photo doesn't
+        prove a product is fake, and a crisp photo doesn't prove it's real. Paste a few real
+        details from the listing below for a more grounded score.
+      </p>
+
+      <div class="field-grid">
+        <label class="field">
+          <span>Listing price</span>
+          <input type="number" id="priceInput" min="0" step="0.01" placeholder="e.g. 499">
+        </label>
+        <label class="field">
+          <span>Typical market price</span>
+          <input type="number" id="expectedPriceInput" min="0" step="0.01" placeholder="e.g. 2999">
+        </label>
+        <label class="field">
+          <span>Average rating (0–5)</span>
+          <input type="number" id="avgRatingInput" min="0" max="5" step="0.1" placeholder="e.g. 4.6">
+        </label>
+        <label class="field">
+          <span>Number of ratings</span>
+          <input type="number" id="numRatingsInput" min="0" step="1" placeholder="e.g. 1200">
+        </label>
+        <label class="field">
+          <span>Seller active (months)</span>
+          <input type="number" id="sellerMonthsInput" min="0" step="1" placeholder="e.g. 24">
+        </label>
+      </div>
+
+      <label class="field field-wide">
+        <span>Paste a few reviews (one per line)</span>
+        <textarea id="reviewTextInput" rows="4" placeholder="Battery life is decent, packaging was fine...&#10;Best product ever!!! Five stars!!!"></textarea>
+      </label>
+
+      <label class="field field-wide">
+        <span>...or upload a reviews CSV <span class="field-note">(column named review / text / comment)</span></span>
+        <input type="file" id="reviewsCsvInput" accept=".csv">
+      </label>
+
+      <label class="field field-wide">
+        <span>Buyer/reviewer photos <span class="field-note">(optional — compares against the listing image)</span></span>
+        <input type="file" id="buyerImagesInput" accept=".png,.jpg,.jpeg,.webp,.bmp" multiple>
+      </label>
+
+      <div id="buyerImagesPreview" class="buyer-images-preview"></div>
+
+      <div class="signals-summary" id="signalsSummary">
+        <span>Signals ready:</span>
+        <span class="signal-chip" id="chipImage">Image</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+  <!-- RIGHT: Results -->
+  <section class="panel results-panel">
+    <h2 class="panel-title"><span class="idx">03</span> Risk Assessment</h2>
+
+    <div id="idleState" class="idle-state">
+      <div class="idle-icon">🔍</div>
+      <p>Upload an image and run the scan to see its Counterfeit Risk Score.</p>
+    </div>
+
+    <div id="loadingState" class="loading-state hidden">
+      <div class="scanner-ring"></div>
+      <p id="loadingText" class="loading-text">Analyzing pixel structure…</p>
+      <div class="loading-log" id="loadingLog"></div>
+    </div>
+
+    <div id="resultState" class="result-state hidden">
+
+      <div class="score-row">
+        <div class="score-gauge">
+          <svg viewBox="0 0 160 160" class="gauge-svg">
+            <circle cx="80" cy="80" r="70" class="gauge-track"></circle>
+            <circle cx="80" cy="80" r="70" class="gauge-fill" id="gaugeFill"></circle>
+          </svg>
+          <div class="gauge-center">
+            <span id="scoreNumber" class="score-number">0</span>
+            <span class="score-max">/100</span>
+          </div>
+        </div>
+        <div class="score-info">
+          <span class="score-label">Counterfeit Risk</span>
+          <span id="riskLevel" class="risk-level">—</span>
+          <p id="riskSummary" class="risk-summary"></p>
+          <div id="demoReference" class="demo-reference hidden"></div>
+        </div>
+      </div>
+
+      <div class="indicators" id="indicators">
+        <!-- indicator cards injected by JS -->
+      </div>
+
+      <div class="explanation-box">
+        <h3>Why this score?</h3>
+        <ul id="explanationList"></ul>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  Built for hackathon demo purposes · Python + Flask + OpenCV · No external APIs, no database, no login
+</footer>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
